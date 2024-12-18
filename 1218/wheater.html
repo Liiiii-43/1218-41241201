@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>氣象資料查詢</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #d3e6ff;
+        }
+        .station-name {
+            background-color: #e8f5e9;
+        }
+        .temperature {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>氣象觀測站資料</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>站名</th>
+                <th>縣市</th>
+                <th>鄉鎮</th>
+                <th>經度</th>
+                <th>緯度</th>
+                <th>氣溫 (°C)</th>
+                <th>相對濕度 (%)</th>
+                <th>氣壓 (hPa)</th>
+            </tr>
+        </thead>
+        <tbody id="stationData">
+            <!-- 資料將動態插入 -->
+        </tbody>
+    </table>
+
+    <script>
+        // API 請求 URL
+        const apiUrl = "https://opendata.cwb.gov.tw/api/v1/rest/datastore/O-A0001-001?Authorization=rdec-key-123-45678-011121314";
+
+        // 獲取資料並更新表格
+        fetch(apiUrl)
+            .then(response => response.json())
+            .then(data => {
+                const stationData = data.records.Station;
+                const tableBody = document.getElementById('stationData');
+                
+                // 清空表格內容
+                tableBody.innerHTML = "";
+
+                // 解析資料並生成表格列
+                stationData.forEach(station => {
+                    const row = document.createElement('tr');
+
+                    // 站名
+                    const stationName = document.createElement('td');
+                    stationName.textContent = station.StationName;
+                    stationName.classList.add('station-name');
+                    row.appendChild(stationName);
+
+                    // 縣市
+                    const countyName = document.createElement('td');
+                    countyName.textContent = station.GeoInfo.CountyName;
+                    row.appendChild(countyName);
+
+                    // 鄉鎮
+                    const townName = document.createElement('td');
+                    townName.textContent = station.GeoInfo.TownName;
+                    row.appendChild(townName);
+
+                    // 經度
+                    const longitude = document.createElement('td');
+                    longitude.textContent = station.GeoInfo.Coordinates[1].StationLongitude;
+                    row.appendChild(longitude);
+
+                    // 緯度
+                    const latitude = document.createElement('td');
+                    latitude.textContent = station.GeoInfo.Coordinates[1].StationLatitude;
+                    row.appendChild(latitude);
+
+                    // 氣溫
+                    const temperature = document.createElement('td');
+                    temperature.textContent = station.WeatherElement.AirTemperature.toFixed(1);
+                    temperature.classList.add('temperature');
+                    row.appendChild(temperature);
+
+                    // 相對濕度
+                    const humidity = document.createElement('td');
+                    humidity.textContent = station.WeatherElement.RelativeHumidity;
+                    row.appendChild(humidity);
+
+                    // 氣壓
+                    const pressure = document.createElement('td');
+                    pressure.textContent = station.WeatherElement.AirPressure;
+                    row.appendChild(pressure);
+
+                    tableBody.appendChild(row);
+                });
+            })
+            .catch(error => {
+                console.error("獲取資料時發生錯誤:", error);
+                alert("無法取得資料，請稍後再試。");
+            });
+    </script>
+</body>
+</html>

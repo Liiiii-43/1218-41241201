@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台灣證券交易所股票資料查詢</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+            cursor: pointer;
+        }
+        th {
+            background-color: #d3e6ff;
+        }
+        td {
+            text-align: left;
+        }
+        td[data-field="Code"] {
+            background-color: #E8F5E9;
+        }
+        td[data-field="Name"] {
+            background-color: #FFF8DC;
+        }
+        td[data-field="Change"] {
+            color: inherit;
+        }
+        td.positive {
+            color: red;
+        }
+        td.negative {
+            color: green;
+        }
+        .input-container {
+            margin-bottom: 20px;
+        }
+        .button-container {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>台灣證券交易所股票資料查詢</h1>
+
+    <!-- 查詢區域 -->
+    <div class="input-container">
+        <label for="stockCode">請輸入股票代碼或名稱：</label>
+        <input type="text" id="stockCode" placeholder="例如：2330 或 台積電">
+        <button id="searchButton">查詢</button>
+    </div>
+
+    <!-- 回到全部股票按鈕 -->
+    <div class="button-container">
+        <button id="showAllButton" style="display: none;">回到全部股票</button>
+    </div>
+
+    <table id="stockTable">
+        <thead>
+            <tr>
+                <th data-key="Code">股票代碼</th>
+                <th data-key="Name">名稱</th>
+                <th data-key="TradeVolume">成交量</th>
+                <th data-key="TradeValue">成交金額</th>
+                <th data-key="OpeningPrice">開盤價</th>
+                <th data-key="HighestPrice">最高價</th>
+                <th data-key="LowestPrice">最低價</th>
+                <th data-key="ClosingPrice">收盤價</th>
+                <th data-key="Change">漲跌</th>
+                <th data-key="Transaction">成交筆數</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- 資料將會顯示在這裡 -->
+        </tbody>
+    </table>
+
+    <script>
+        let allStockData = [];  // 儲存所有股票資料
+        let currentSortKey = ''; // 當前排序的欄位
+        let isAscending = true; // 是否為升序排序
+
+        // 當頁面加載時載入所有資料
+        window.onload = function() {
+            const url = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL";  // 假設這是正確的 API 格式
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length === 0) {
+                        alert("沒有資料可顯示");
+                        return;
+                    }
+                    allStockData = data;  // 儲存所有資料
+                    displayStockData(allStockData);  // 顯示所有資料
+                })
+                .catch(error => {
+                    console.error('獲取資料失敗:', error);
+                    alert("發生錯誤，無法獲取資料。");
+                });
+        };
+
+        // 顯示股票資料
+        function displayStockData(data) {
+            const tableBody = document.getElementById('stockTable').querySelector('tbody');
+            tableBody.innerHTML = '';  // 清空表格內容
+
+            data.forEach(item => {
+                const row = document.createElement('tr');
+
+                const cell1 = document.createElement('td');
+                cell1.textContent = item.Code;
+                cell1.setAttribute('data-field', 'Code');
+                row.appendChild(cell1);
+
+                const cell2 = document.createElement('td');
+                cell2.textContent = item.Name;
+                cell2.setAttribute('data-field', 'Name');
+                row.appendChild(cell2);
+
+                const cell3 = document.createElement('td');
+                cell3.textContent = item.TradeVolume;
+                row.appendChild(cell3);
+
+                const cell4 = document.createElement('td');
+                cell4.textContent = item.TradeValue;
+                row.appendChild(cell4);
+
+                const cell5 = document.createElement('td');
+                cell5.textContent = item.OpeningPrice;
+                row.appendChild(cell5);
+
+                const cell6 = document.createElement('td');
+                cell6.textContent = item.HighestPrice;
+                row.appendChild(cell6);
+
+                const cell7 = document.createElement('td');
+                cell7.textContent = item.LowestPrice;
+                row.appendChild(cell7);
+
+                const cell8 = document.createElement('td');
+                cell8.textContent = item.ClosingPrice;
+                row.appendChild(cell8);
+
+                const cell9 = document.createElement('td');
+                cell9.textContent = item.Change;
+                cell9.setAttribute('data-field', 'Change');
+                const changeValue = parseFloat(item.Change);
+                if (changeValue > 0) {
+                    cell9.classList.add('positive');
+                } else if (changeValue < 0) {
+                    cell9.classList.add('negative');
+                }
+                row.appendChild(cell9);
+
+                const cell10 = document.createElement('td');
+                cell10.textContent = item.Transaction;
+                row.appendChild(cell10);
+
+                tableBody.appendChild(row);
+            });
+        }
+
+        // 查詢按鈕事件
+        document.getElementById('searchButton').addEventListener('click', () => {
+            const searchValue = document.getElementById('stockCode').value.trim().toLowerCase();
+
+            if (!searchValue) {
+                alert("請輸入股票代碼或名稱");
+                return;
+            }
+
+            const filteredData = allStockData.filter(item => 
+                item.Code.toLowerCase().includes(searchValue) || 
+                item.Name.toLowerCase().includes(searchValue)
+            );
+
+            if (filteredData.length === 0) {
+                alert('未找到相關的股票資料');
+                return;
+            }
+
+            displayStockData(filteredData); // 顯示篩選後的資料
+
+            // 顯示回到全部股票按鈕
+            document.getElementById('showAllButton').style.display = 'inline-block';
+        });
+
+        // 回到全部股票按鈕事件
+        document.getElementById('showAllButton').addEventListener('click', () => {
+            displayStockData(allStockData);  // 顯示所有資料
+
+            // 隱藏回到全部股票按鈕
+            document.getElementById('showAllButton').style.display = 'none';
+        });
+
+        // 排序功能
+        document.querySelectorAll('#stockTable th').forEach(th => {
+            th.addEventListener('click', () => {
+                const key = th.dataset.key;
+
+                if (key === currentSortKey) {
+                    isAscending = !isAscending; // 切換排序順序
+                } else {
+                    currentSortKey = key;
+                    isAscending = true; // 默認升序
+                }
+
+                const sortedData = [...allStockData].sort((a, b) => {
+                    if (a[key] < b[key]) return isAscending ? -1 : 1;
+                    if (a[key] > b[key]) return isAscending ? 1 : -1;
+                    return 0;
+                });
+
+                displayStockData(sortedData);
+            });
+        });
+    </script>
+</body>
+</html>

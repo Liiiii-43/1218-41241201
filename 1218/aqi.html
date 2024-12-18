@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>空氣品質資料查詢</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+        }
+        th {
+            background-color: #d3e6ff;
+            text-align: center;
+            cursor: pointer;
+        }
+        td {
+            text-align: left; /* 預設內容靠左對齊 */
+        }
+        .input-container {
+            margin-bottom: 20px;
+        }
+        .good {
+            background-color: #c2ffc2;
+        }
+        .moderate {
+            background-color: #ffffc4;
+        }
+        .unhealthy-sensitive {
+            background-color: #ffd6ad;
+        }
+        .unhealthy {
+            background-color: #ff8888;
+        }
+        .very-unhealthy {
+            background-color: #fac6ff;
+        }
+        .hazardous {
+            background-color: #b57587;
+        }
+        .sitename {
+            background-color: #FFF8DC;
+            width: 120px;
+        }
+        .county {
+            background-color: #E8F5E9;
+            white-space: nowrap; /* 防止換行 */
+        }
+        .numeric {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>空氣品質資料查詢</h1>
+
+    <!-- 搜尋區域 -->
+    <div class="input-container">
+        <label for="searchInput">請輸入測站名稱或縣市：</label>
+        <input type="text" id="searchInput" placeholder="例如：台北 或 台北市">
+        <button id="searchButton">查詢</button>
+        <button id="resetButton">重置</button>
+    </div>
+
+    <!-- 表格 -->
+    <table id="airQualityTable">
+        <thead>
+            <tr>
+                <th data-key="sitename">測站名稱</th>
+                <th data-key="county">縣市</th>
+                <th data-key="aqi">空氣品質指標</th>
+                <th data-key="pollutant">空氣污染指標物</th>
+                <th data-key="status">狀態</th>
+                <th data-key="so2">二氧化硫（ppb）</th>
+                <th data-key="co">一氧化碳（ppm）</th>
+                <th data-key="o3">臭氧（ppb）</th>
+                <th data-key="pm10">懸浮微粒（μg/m3）</th>
+                <th data-key="pm2.5">細懸浮微粒（μg/m3）</th>
+                <th data-key="publishtime">資料發布時間</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- 資料將會顯示在這裡 -->
+        </tbody>
+    </table>
+
+    <script>
+        let airQualityData = []; // 儲存 API 資料
+        let currentSortKey = ''; // 當前排序欄位
+        let isAscending = true; // 是否為升序
+
+        // 載入空氣品質資料
+        window.onload = function() {
+            const apiUrl = "https://data.moenv.gov.tw/api/v2/aqx_p_432?api_key=e8dd42e6-9b8b-43f8-991e-b3dee723a52d&limit=1000&sort=ImportDate desc&format=JSON";
+
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    airQualityData = data.records; // 取得資料陣列
+                    displayAirQualityData(airQualityData); // 顯示資料
+                })
+                .catch(error => {
+                    console.error("獲取資料失敗:", error);
+                    alert("無法載入空氣品質資料");
+                });
+        };
+
+        // 顯示空氣品質資料
+        function displayAirQualityData(data) {
+            const tableBody = document.getElementById("airQualityTable").querySelector("tbody");
+            tableBody.innerHTML = ""; // 清空表格
+
+            data.forEach(item => {
+                const row = document.createElement("tr");
+
+                const fields = ["sitename", "county", "aqi", "pollutant", "status", "so2", "co", "o3", "pm10", "pm2.5", "publishtime"];
+
+                fields.forEach(field => {
+                    const cell = document.createElement("td");
+                    cell.textContent = item[field] || "N/A"; // 若無資料則顯示 "N/A"
+
+                    // 若為 AQI 欄位，根據數值設定背景顏色
+                    if (field === "aqi" && item[field]) {
+                        const aqiValue = parseInt(item[field]);
+                        if (aqiValue >= 0 && aqiValue <= 50) {
+                            cell.className = "good";
+                        } else if (aqiValue >= 51 && aqiValue <= 100) {
+                            cell.className = "moderate";
+                        } else if (aqiValue >= 101 && aqiValue <= 150) {
+                            cell.className = "unhealthy-sensitive";
+                        } else if (aqiValue >= 151 && aqiValue <= 200) {
+                            cell.className = "unhealthy";
+                        } else if (aqiValue >= 201 && aqiValue <= 300) {
+                            cell.className = "very-unhealthy";
+                        } else if (aqiValue >= 301 && aqiValue <= 500) {
+                            cell.className = "hazardous";
+                        }
+                    }
+
+                    // 設定測站名稱和縣市欄位的背景色
+                    if (field === "sitename") {
+                        cell.className = "sitename";
+                    } else if (field === "county") {
+                        cell.className = "county";
+                    }
+
+                    // 對數字欄位應用數字置中的樣式
+                    if (["aqi", "so2", "co", "o3", "pm10", "pm2.5"].includes(field)) {
+                        cell.className += " numeric";
+                    }
+
+                    row.appendChild(cell);
+                });
+
+                tableBody.appendChild(row);
+            });
+        }
+
+        // 排序功能
+        document.querySelectorAll("#airQualityTable th").forEach(th => {
+            th.addEventListener("click", () => {
+                const key = th.dataset.key;
+
+                if (key === currentSortKey) {
+                    isAscending = !isAscending; // 切換排序順序
+                } else {
+                    currentSortKey = key;
+                    isAscending = true; // 默認升序
+                }
+
+                const sortedData = [...airQualityData].sort((a, b) => {
+                    if ((a[key] || "").toLowerCase() < (b[key] || "").toLowerCase()) return isAscending ? -1 : 1;
+                    if ((a[key] || "").toLowerCase() > (b[key] || "").toLowerCase()) return isAscending ? 1 : -1;
+                    return 0;
+                });
+
+                displayAirQualityData(sortedData);
+            });
+        });
+
+        // 搜尋功能
+        document.getElementById("searchButton").addEventListener("click", () => {
+            const query = document.getElementById("searchInput").value.trim().toLowerCase();
+
+            if (!query) {
+                alert("請輸入搜尋內容");
+                return;
+            }
+
+            const filteredData = airQualityData.filter(item => {
+                return (item.sitename && item.sitename.toLowerCase().includes(query)) ||
+                       (item.county && item.county.toLowerCase().includes(query));
+            });
+
+            if (filteredData.length === 0) {
+                alert("未找到符合的資料");
+            }
+
+            displayAirQualityData(filteredData);
+        });
+
+        // 重置功能
+        document.getElementById("resetButton").addEventListener("click", () => {
+            document.getElementById("searchInput").value = "";
+            displayAirQualityData(airQualityData);
+        });
+    </script>
+</body>
+</html>
